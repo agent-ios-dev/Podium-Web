@@ -1,0 +1,56 @@
+name: Build Wasm, verify WebKit and publish Pages
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: pages
+  cancel-in-progress: false
+jobs:
+  build:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - name: Check out exact original Podium sources
+        uses: actions/checkout@v4
+        with:
+          repository: Leviidev/Podium
+          ref: b8f54f55f33df3860c14ec134a416906f88348ad
+          path: upstream
+      - name: Build real Swift ARMv7 core with Wasm SDK
+        run: |
+          mkdir -p ../Podium
+          cp -a upstream/. ../Podium/
+          docker run --rm -v "$GITHUB_WORKSPACE/..:/work" -w "/work/$(basename "$GITHUB_WORKSPACE")" swift:6.2.4-jammy sh -c 'python3 tools/install_sdk.py && sh tools/build.sh'
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci --ignore-scripts && node tools/vendor.mjs
+      - name: Execute ARM and Thumb semantic checks in actual Wasm
+        run: npm test
+      - run: npx playwright install --with-deps webkit chromium
+      - name: Browser tests including mobile WebKit
+        run: npx playwright test
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: browser-evidence
+          path: reports/
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: web
+  deploy:
+    needs: build
+    runs-on: ubuntu-24.04
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4

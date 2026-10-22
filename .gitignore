@@ -1,0 +1,9 @@
+.build/
+Sources/Upstream/
+node_modules/
+web/core.wasm
+upstream-manifest.json
+test-results/
+playwright-report/
+web/vendor/
+reports/*.png

@@ -1,0 +1,21 @@
+{
+  "date": "2026-10-22",
+  "target": "iPod touch 4 / iOS 6.1.6 / Safari WebAssembly",
+  "swift_version": "6.2.4",
+  "upstream_revision": "b8f54f55f33df3860c14ec134a416906f88348ad",
+  "core": "real original Podium ARMv7 interpreter compiled to Wasm",
+  "wasm_node_semantic_tests_passed": 9,
+  "chromium_browser_test_passed": true,
+  "mobile_webkit_browser_test_passed": true,
+  "physical_iphone_safari_verified": false,
+  "guest_ios_boot_verified": false,
+  "springboard_verified": false,
+  "guest_app_launch_verified": false,
+  "a4_model_bootloader_and_scanout_compile": true,
+  "aes_known_answer_vector_passed": true,
+  "guest_disk_host_callbacks": "implemented; not full guest I/O proof",
+  "firmware_import_and_preparation": "not connected in website",
+  "native_arm64_jit": "unavailable; interpreter explicitly selected",
+  "ui": "Home, Settings, Firmware, emulator, Developer Console based on original SwiftUI structure; unsupported guest actions disabled",
+  "published_firmware_or_keys": false
+}
