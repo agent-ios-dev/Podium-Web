@@ -73,7 +73,11 @@ picker.onchange=()=>{
  if(busy)return;pendingFiles=Array.from(picker.files);busy=true;$('import-prepared').disabled=true;$('fixture-status').textContent='Validating prepared files…';
  if(!worker)$('load').click();else if(coreReady){worker.postMessage({type:'import-fixture',files:pendingFiles});pendingFiles=undefined;}
 };
-$('power').onclick=()=>{if(!worker||!fixtureReady)return;worker.postMessage({type:guestActive?'pause':'boot'});};
+$('power').onclick=()=>{
+ if(!worker||!fixtureReady)return;
+ if(!guestActive&&!guestStarted){$('boot-overlay').hidden=false;$('boot-details').hidden=false;$('emulator').classList.add('booting');$('power').disabled=true;$('subtitle').textContent='Подготовка iOS…';}
+ worker.postMessage({type:guestActive?'pause':'boot'});
+};
 const canvas=$('guest-canvas');let touching=false;
 function sendTouch(event,phase){const rect=canvas.getBoundingClientRect();worker?.postMessage({type:'touch',phase,x:Math.max(0,Math.min(640,(event.clientX-rect.left)*640/rect.width)),y:Math.max(0,Math.min(960,(event.clientY-rect.top)*960/rect.height))});}
 canvas.onpointerdown=event=>{if(!guestActive)return;touching=true;canvas.setPointerCapture(event.pointerId);sendTouch(event,0);};
