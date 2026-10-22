@@ -28,7 +28,7 @@ for(const [name,detail] of [['Install IPA Apps','Add .ipa apps to /Applications'
 }
 function log(text){lines.push(`${new Date().toLocaleTimeString()}  ${text}`);$('log').textContent=lines.join('\n');}
 function state(text){$('cpu-status').textContent=text;}
-function controls(ready){for(const id of ['test','speed'])$(id).disabled=!ready;$('stop').disabled=!worker;}
+function controls(ready){for(const id of ['test','speed','storage-test'])$(id).disabled=!ready;$('stop').disabled=!worker;}
 function showRegisters(data){if(!data.registers)return;$('register-section').hidden=false;$('registers').replaceChildren(...data.registers.map((value,i)=>{const row=document.createElement('div'),name=document.createElement('span'),hex=document.createElement('code');row.className='row';name.textContent=i===15?'PC':i===14?'LR':i===13?'SP':`R${i}`;hex.textContent=`0x${value.toString(16).padStart(8,'0')}`;row.append(name,hex);return row;}));}
 $('load').onclick=()=>{
  worker?.terminate();worker=new Worker(new URL('./worker.js',import.meta.url),{type:'module'});state('Loading WebAssembly…');controls(false);$('load').disabled=true;
@@ -40,10 +40,17 @@ $('load').onclick=()=>{
   if(data.type==='error'){state('Execution error');log(data.message);return;}
   if(data.type==='test'){$('results').replaceChildren(...data.results.map(result=>{const p=document.createElement('p');p.className=result.passed?'pass':'fail';p.textContent=`${result.passed?'✓':'✗'} ${result.name}`;log(p.textContent);return p;}));state(data.results.every(x=>x.passed)?'ARM/Thumb tests passed':'Test failed');}
   else if(data.type==='benchmark'){log(`${data.retired.toLocaleString()} instructions; ${data.mips.toFixed(2)} MIPS`);state('Interpreter active');}
+  else if(data.type==='storage'){log('OPFS: Wasm write → flush → read → close → reopen verified. Temporary test file removed.');state('OPFS test passed');}
+  else if(data.type==='storage-unsupported'){log(data.message);state('OPFS unavailable');}
  };
  worker.postMessage({type:'init'});
 };
-for(const [id,type] of [['test','selftest'],['speed','benchmark']])$(id).onclick=()=>{if(!worker||busy)return;busy=true;controls(false);state('Executing in Web Worker…');worker.postMessage({type});};
+for(const [id,type] of [['test','selftest'],['speed','benchmark'],['storage-test','storage-test']])$(id).onclick=()=>{if(!worker||busy)return;busy=true;controls(false);state('Executing in Web Worker…');worker.postMessage({type});};
 $('stop').onclick=()=>{worker?.terminate();worker=null;busy=false;controls(false);$('load').disabled=false;state('Not active');log('Worker stopped.');};
 $('save').onclick=()=>{const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([lines.join('\n')],{type:'text/plain;charset=utf-8'}));a.download='podium-web-log.txt';a.click();setTimeout(()=>URL.revokeObjectURL(a.href),1000);};
 navigate('home');
+const powerIcon='<svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2v9M6.3 5.5a9 9 0 1 0 11.4 0"/></svg>';
+for(const element of document.querySelectorAll('.launch,#power,.display-symbol,.control-bar button[aria-label="Power"]')) element.innerHTML=element.innerHTML.replace('⏻',powerIcon);
+const homeIcon='<svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="m3 11 9-8 9 8M5 9v12h5v-7h4v7h5V9"/></svg>';
+document.querySelector('.control-bar button[aria-label="Home button"]').innerHTML=homeIcon;
+for(const [label,sign] of [['Volume down','−'],['Volume up','+']])document.querySelector(`.control-bar button[aria-label="${label}"]`).innerHTML=`<svg class="icon" viewBox="0 0 28 24" aria-hidden="true"><path d="M3 8h4l6-5v18l-6-5H3z"/><text x="18" y="16" fill="currentColor" stroke="none" font-size="17">${sign}</text></svg>`;

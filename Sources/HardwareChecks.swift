@@ -1,4 +1,5 @@
 import Foundation
+import BrowserHost
 
 @_cdecl("podium_hardware_test")
 func hardwareTest() -> Int32 {
@@ -36,4 +37,14 @@ func aesTest() -> Int32 {
     let encrypted = S5L8930XCDMA.aes(plaintext, key: key, iv: Array(repeating: 0, count: 16), encrypt: true, cbc: false)
     guard encrypted == ciphertext else { return -1 }
     return S5L8930XCDMA.aes(ciphertext, key: key, iv: Array(repeating: 0, count: 16), encrypt: false, cbc: false) == plaintext ? 0 : -2
+}
+@_cdecl("podium_storage_test")
+func storageTest() -> Int32 {
+    let source: [UInt8] = [80, 79, 68, 73, 85, 77, 87, 69, 66, 45, 79, 80, 70, 83, 49, 10]
+    guard browser_disk_size() == 16 else { return -1 }
+    let written = source.withUnsafeBytes { browser_disk_write(0, $0.baseAddress, 16) }
+    guard written == 16, browser_disk_flush() == 0 else { return -2 }
+    var result = [UInt8](repeating: 0, count: 16)
+    let read = result.withUnsafeMutableBytes { browser_disk_read(0, $0.baseAddress, 16) }
+    return read == 16 && result == source ? 0 : -3
 }

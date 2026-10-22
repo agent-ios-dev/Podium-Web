@@ -12,10 +12,14 @@
   "springboard_verified": false,
   "guest_app_launch_verified": false,
   "a4_model_bootloader_and_scanout_compile": true,
+  "original_kernel_execution": {"kernel": "10B500", "read_only": true, "device_tree": "original n81ap", "root_disk_attached": false, "initialization_result": 0, "instructions_executed": 100000000, "cpu_error_or_stop_breakpoint_observed": false, "is_ios_ui_proof": false},
   "aes_known_answer_vector_passed": true,
   "guest_disk_host_callbacks": "implemented; not full guest I/O proof",
+  "opfs_roundtrip_chromium": "actual Wasm write, flush, read and reopen passed on own 16-byte test file",
+  "opfs_windows_webkit": "API unavailable; persistence is NOT verified; explicit capability error is reported",
   "firmware_import_and_preparation": "not connected in website",
   "native_arm64_jit": "unavailable; interpreter explicitly selected",
   "ui": "Home, Settings, Firmware, emulator, Developer Console based on original SwiftUI structure; unsupported guest actions disabled",
   "published_firmware_or_keys": false
 }
+

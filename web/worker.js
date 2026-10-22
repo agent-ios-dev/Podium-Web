@@ -46,7 +46,27 @@ onmessage = async ({data})=>{
       results.push({name:'ARM: переход через инструкцию',passed:core.podium_run(2)===2 && core.podium_register(0)===10});
       program([0x30032005],true);
       results.push({name:'Thumb: MOVS + ADDS',passed:core.podium_run(2)===2 && core.podium_register(0)===8});
+      results.push({name:'A4: таймер, IRQ и MMIO',passed:core.podium_hardware_test()===0});
+      results.push({name:'AES: независимый тестовый вектор',passed:core.podium_aes_test()===0});
       send('test',{results,...snapshot()});
+    } else if(data.type==='storage-test') {
+      if(!navigator.storage?.getDirectory){send('storage-unsupported',{message:'OPFS недоступен в этом браузере. Сохранение гостевого диска не подтверждено.'});return;}
+      if(diskHandle)throw new Error('Диск уже открыт');
+      const directory=await navigator.storage.getDirectory(),name=`podium-storage-test-${crypto.randomUUID()}`;
+      try {
+        const file=await directory.getFileHandle(name,{create:true});
+        if(!file.createSyncAccessHandle){send('storage-unsupported',{message:'Синхронный OPFS недоступен в Worker. Гостевой диск не подключён.'});return;}
+        diskHandle=await file.createSyncAccessHandle();diskHandle.truncate(16);
+        const result=core.podium_storage_test();
+        diskHandle.close();diskHandle=undefined;
+        const handle=await file.createSyncAccessHandle();
+        const bytes=new Uint8Array(16);handle.read(bytes,{at:0});handle.close();
+        if(result!==0 || new TextDecoder().decode(bytes)!=='PODIUMWEB-OPFS1\n')throw new Error(`OPFS проверка не пройдена: ${result}`);
+        send('storage',{passed:true});
+      } finally {
+        if(diskHandle){diskHandle.close();diskHandle=undefined;}
+        await directory.removeEntry(name);
+      }
     } else if (data.type==='benchmark') {
       program([0xe2800001,0xeafffffd]); // ADD r0,#1; branch back to ADD
       const start=performance.now(); let retired=0;

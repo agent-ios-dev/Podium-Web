@@ -31,12 +31,12 @@ final class BrowserMachine {
     let cpu: ARMv7CPU
     let platform: S5L8930XPlatform
     let display: DisplayScanout
-    let disk: FileBackedStorage
+    let disk: FileBackedStorage?
     let pixels: UnsafeMutableRawPointer
-    init(kernel: Data, tree: Data) throws {
+    init(kernel: Data, tree: Data, requireDisk: Bool = true) throws {
         // Check the disk and exact kernel before reserving a GiB of guest RAM.
-        disk = try FileBackedStorage()
-        let patched = try GuestDiskBridge.patch(kernel)
+        disk = requireDisk ? try FileBackedStorage() : nil
+        let patched = requireDisk ? try GuestDiskBridge.patch(kernel) : kernel
         memory = BrowserMemory(length: GuestMemoryLayout.ramSize, base: GuestMemoryLayout.ramPhysicalBase)
         bus = SegmentedMemoryBus(regions: [memory, BrowserMemory(length: GuestMemoryLayout.lowSRAMSize)])
         cpu = ARMv7CPU(memory: bus)
@@ -46,8 +46,8 @@ final class BrowserMachine {
         for region in platform.regions { bus.addRegion(region) }
         display = DisplayScanout(memory: bus, dart: platform.dart2, bootFramebuffer: GuestFramebuffer(memory: memory,
             baseAddress: GuestMemoryLayout.framebufferPhysicalAddress, pixelWidth: 640, pixelHeight: 960))
-        let boot = try KernelBootstrap.prepare(kernel: patched, deviceTree: tree, on: bus, ramDiskSize: 4096)
-        GuestDiskBridge.install(on: cpu, disk: disk)
+        let boot = try KernelBootstrap.prepare(kernel: patched, deviceTree: tree, on: bus, ramDiskSize: requireDisk ? 4096 : nil)
+        if let disk { GuestDiskBridge.install(on: cpu, disk: disk) }
         cpu.reset(); cpu.loadInitialRegisters(boot.initialRegisters)
         cpu.breakpoints = [0x8001_7C10, 0x8001_7F28, 0x801D_F6E8]
         pixels = .allocate(byteCount: 640 * 960 * 4, alignment: 16)
@@ -105,4 +105,15 @@ func touch(_ phase: Int32, _ x: Double, _ y: Double) {
     case 2: machine.platform.handle(.touchEnded(point)); default: break }
 }
 @_cdecl("podium_flush")
-func flush() -> Int32 { do { try machine?.disk.synchronize(); return 0 } catch { return -1 } }
+func flush() -> Int32 { do { try machine?.disk?.synchronize(); return 0 } catch { return -1 } }
+
+/// Explicit read-only kernel execution probe without any guest root disk.
+/// Success is only CPU/loader progress, never iOS userspace or UI proof.
+@_cdecl("podium_kernel_probe")
+func kernelProbe(_ kernel: UnsafeMutableRawPointer?, _ kernelSize: Int32, _ tree: UnsafeMutableRawPointer?, _ treeSize: Int32) -> Int32 {
+    guard machine == nil, let kernel, let tree, staging[kernel] == Int(kernelSize), staging[tree] == Int(treeSize) else { return -1 }
+    do {
+        machine = try BrowserMachine(kernel: Data(bytes: kernel, count: Int(kernelSize)), tree: Data(bytes: tree, count: Int(treeSize)), requireDisk: false)
+        return 0
+    } catch { print("Read-only kernel probe failed: \(error)"); return -2 }
+}

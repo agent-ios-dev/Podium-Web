@@ -31,9 +31,8 @@ jobs:
       - run: npm ci --ignore-scripts && node tools/vendor.mjs
       - name: Execute ARM and Thumb semantic checks in actual Wasm
         run: npm test
-      - run: npx playwright install --with-deps webkit chromium
       - name: Browser tests including mobile WebKit
-        run: npx playwright test
+        run: docker run --rm --shm-size=1g -v "$GITHUB_WORKSPACE:$GITHUB_WORKSPACE" -w "$GITHUB_WORKSPACE" mcr.microsoft.com/playwright:v1.56.1-noble npx playwright test
       - uses: actions/upload-artifact@v4
         if: always()
         with:

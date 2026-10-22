@@ -5,8 +5,6 @@ import path from 'node:path';
 const root = path.resolve(fileURLToPath(new URL('../web/', import.meta.url)));
 const mime = {'.html':'text/html; charset=utf-8','.js':'text/javascript; charset=utf-8','.css':'text/css; charset=utf-8','.wasm':'application/wasm','.json':'application/json'};
 http.createServer(async (req,res)=>{
-  res.setHeader('Cross-Origin-Opener-Policy','same-origin');
-  res.setHeader('Cross-Origin-Embedder-Policy','require-corp');
   res.setHeader('Cache-Control','no-store');
   try {
     const url = new URL(req.url,'http://localhost');

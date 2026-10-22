@@ -8,11 +8,15 @@ test('Podium navigation and actual Wasm execution',async({page})=>{
  await page.getByRole('button',{name:'Load WebAssembly Core'}).click();
  await expect(page.locator('#cpu-status')).toHaveText('Interpreter active');
  await page.getByRole('button',{name:'Test ARMv7',exact:true}).click();
- await expect(page.locator('#results .pass')).toHaveCount(3);
+ await expect(page.locator('#results .pass')).toHaveCount(5);
  await expect(page.locator('#cpu-status')).toHaveText('ARM/Thumb tests passed');
  await expect(page.locator('#registers')).toContainText('0x00000008');
  await page.getByRole('button',{name:'Benchmark',exact:true}).click();
  await expect(page.locator('#log')).toContainText('2,000,000 instructions');
+ await page.getByRole('button',{name:'Test OPFS disk',exact:true}).click();
+ await expect(page.locator('#cpu-status')).toHaveText(/^(OPFS test passed|OPFS unavailable)$/);
+ await test.info().attach('storage-capability',{body:await page.locator('#cpu-status').innerText(),contentType:'text/plain'});
+ if(test.info().project.name==='chromium')await expect(page.locator('#cpu-status')).toHaveText('OPFS test passed');
  await page.getByRole('button',{name:'Stop',exact:true}).click();await expect(page.locator('#cpu-status')).toHaveText('Not active');
  await page.screenshot({path:`reports/${test.info().project.name}-cpu.png`,fullPage:true});
  await page.locator('#tabs').getByRole('button',{name:'Settings',exact:true}).last().click();

@@ -11,11 +11,17 @@ release. No firmware, disks, keys, or guest screenshots are published here.
   guest memory, Thumb, invalid input boundaries, actual A4 timer/IRQ/MMIO,
   independent FIPS AES vector and invalid boot arguments).
 - Three guest instruction checks also pass in the browser's WASI shim.
+- The original iOS 6.1.6 kernel + original n81ap device tree executed
+  100 million instructions in a private, read-only Wasm kernel probe with no
+  observed CPU halt. No root disk was attached: this is not a full iOS boot.
 - Home, Settings, Firmware, emulator and Developer Console layouts follow the
   original SwiftUI screen hierarchy. Unsupported guest controls are disabled.
 - Navigation, theme changes, actual Wasm execution, benchmark and stop pass in
   Chromium and Playwright's mobile WebKit configuration. This does **not** prove
   physical iPhone Safari behavior, iOS boot, application launch or guest graphics.
+- Chromium passed a real Wasm→OPFS write/flush/read/close/reopen roundtrip on its
+  own temporary 16-byte file. Windows WebKit does not expose the OPFS API; the
+  site reports that limitation explicitly. Persistence on iPhone is unverified.
 
 ## Build and run
 
