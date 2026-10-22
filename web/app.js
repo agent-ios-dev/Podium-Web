@@ -1,5 +1,5 @@
 import {BootStatus} from './boot-status.js';
-let bootStatus;
+let bootStatus,pendingVMFile,backupBusy=false;
 const $=id=>document.getElementById(id);
 let worker,busy=false,lines=[],route='home',previous='home',coreReady=false,pendingFiles,fixtureReady=false,guestActive=false,guestStarted=false;
 const settings={get(key,fallback){try{return localStorage.getItem(key)??fallback;}catch{return fallback;}},set(key,value){try{localStorage.setItem(key,value);}catch{}}};
@@ -25,9 +25,17 @@ $('case').checked=settings.get('case','false')==='true';
 function applyCase(){document.body.classList.toggle('has-case',$('case').checked);}
 $('case').onchange=()=>{settings.set('case',String($('case').checked));applyCase();};applyCase();
 $('show-dev').onchange=()=>{$('developer-link').hidden=!$('show-dev').checked;};
-for(const [name,detail] of [['Install IPA Apps','Add .ipa apps to /Applications'],['Add Files','Copy files into the guest media folder'],['Offline Packages','Install .deb payloads offline'],['Back Up Virtual iPod','Export a guest disk snapshot'],['Restore Backup','Replace guest data from a saved image']]){
+for(const [name,detail] of [['Install IPA Apps','Add .ipa apps to /Applications'],['Add Files','Copy files into the guest media folder'],['Offline Packages','Install .deb payloads offline']]){
  const button=document.createElement('button'),text=document.createElement('span'),small=document.createElement('small');button.className='link-row';button.disabled=true;text.textContent=name;small.textContent=detail;text.append(small);button.append(text);$('storage-actions').append(button);
 }
+const backupArea=document.createElement('div');backupArea.id='vm-backups';
+backupArea.innerHTML='<button id="backup-disk" class="link-row" disabled>Сохранить диск в файл</button><button id="backup-snapshot" class="link-row" disabled>Пауза и сохранить полный снимок</button><button id="restore-vm" class="link-row">Восстановить из файла</button><p class="caption">Диск загружается заново. Полный снимок продолжает сеанс с паузы и требует той же версии ядра эмулятора. Во время сохранения VM остаётся на паузе.</p><p id="backup-status" class="caption" role="status"></p><a id="backup-download" hidden>Скачать готовый файл</a>';
+$('storage-actions').after(backupArea);
+const restorePicker=document.createElement('input');restorePicker.type='file';restorePicker.accept='.gz';restorePicker.hidden=true;document.body.append(restorePicker);
+function backupControls(){ if(backupBusy){controls(false);$('load').disabled=true;$('stop').disabled=true;}else if(!guestStarted){controls(coreReady);$('load').disabled=false;}$('power').disabled=backupBusy||!fixtureReady;document.querySelectorAll('.control-bar button').forEach(b=>b.disabled=backupBusy||!guestStarted);$('backup-disk').disabled=backupBusy||!fixtureReady;$('backup-snapshot').disabled=backupBusy||!guestStarted;$('restore-vm').disabled=backupBusy; }
+for(const [id,kind] of [['backup-disk','disk'],['backup-snapshot','snapshot']])$(id).onclick=()=>{if(!worker||backupBusy)return;backupBusy=true;backupControls();$('backup-status').textContent='Сохраняем. Виртуальная машина останется на паузе…';$('backup-download').hidden=true;worker.postMessage({type:'export-vm',kind});};
+$('restore-vm').onclick=()=>{if(!backupBusy)restorePicker.click();};
+restorePicker.onchange=()=>{const file=restorePicker.files?.[0];if(!file)return;pendingVMFile=file;backupBusy=true;backupControls();$('backup-status').textContent='Проверяем и восстанавливаем файл…';if(worker)worker.postMessage({type:'close-disk'});else{$('load').disabled=false;$('load').click();}};
 function log(text){lines.push(`${new Date().toLocaleTimeString()}  ${text}`);$('log').textContent=lines.join('\n');}
 function state(text){$('cpu-status').textContent=text;}
 function controls(ready){for(const id of ['test','speed','storage-test'])$(id).disabled=!ready||guestStarted;$('stop').disabled=!worker||guestStarted;$('load').disabled=guestStarted;}
@@ -39,11 +47,23 @@ $('load').onclick=()=>{
  worker.onerror=event=>{log(event.message);state('Worker error');$('load').disabled=false;controls(false);};
  worker.onmessage=({data})=>{
   if(data.type==='log'){log(data.text);return;}
-  if(data.type==='init-complete'){coreReady=true;if(pendingFiles){worker.postMessage({type:'import-fixture',files:pendingFiles});pendingFiles=undefined;}return;}
+  if(data.type==='init-complete'){coreReady=true;if(pendingVMFile){worker.postMessage({type:'import-vm',file:pendingVMFile});pendingVMFile=undefined;return;}if(pendingFiles){worker.postMessage({type:'import-fixture',files:pendingFiles});pendingFiles=undefined;}return;}
   if(data.type==='import-progress'){$('fixture-status').textContent=`Copying prepared guest disk: ${Math.round(data.fraction*100)}%`;return;}
-  if(data.type==='fixture-ready'){fixtureReady=true;busy=false;$('import-prepared').disabled=false;$('power').disabled=false;$('fixture-status').textContent='Local iPod4,1 / 10B500 disk connected. Guest boot is still unverified.';document.querySelector('.pill').textContent='Prepared';document.querySelector('.firmware-card .secondary').textContent='iOS 6.1.6 · Build 10B500 · Local disk';log('Validated prepared guest files connected locally; no upload.');return;}
-  if(data.type==='guest-executing'){if(!guestStarted){bootStatus=new BootStatus(Number(settings.get('boot-instructions','8000000000')));$('boot-overlay').hidden=false;$('boot-details').hidden=false;$('emulator').classList.add('booting');}guestStarted=true;guestActive=true;controls(false);$('load').disabled=true;document.querySelectorAll('.control-bar button').forEach(button=>button.disabled=false);$('subtitle').textContent='Guest executing';$('power').textContent='Pause';$('power').disabled=false;log('Original guest instructions executing. This status is not SpringBoard proof.');return;}
+  if(data.type==='fixture-ready'){$('vm-storage-state').textContent='Локальный диск iOS 6.1.6 подключён';fixtureReady=true;backupControls();busy=false;$('import-prepared').disabled=false;$('power').disabled=false;$('fixture-status').textContent='Local iPod4,1 / 10B500 disk connected. Guest boot is still unverified.';document.querySelector('.pill').textContent='Prepared';document.querySelector('.firmware-card .secondary').textContent='iOS 6.1.6 · Build 10B500 · Local disk';log('Validated prepared guest files connected locally; no upload.');return;}
+  if(data.type==='guest-executing'){backupControls();if(!guestStarted){bootStatus=new BootStatus(Number(settings.get('boot-instructions','8000000000')));$('boot-overlay').hidden=false;$('boot-details').hidden=false;$('emulator').classList.add('booting');}guestStarted=true;guestActive=true;backupControls();controls(false);$('load').disabled=true;document.querySelectorAll('.control-bar button').forEach(button=>button.disabled=false);$('subtitle').textContent='Guest executing';$('power').textContent='Pause';$('power').disabled=false;log('Original guest instructions executing. This status is not SpringBoard proof.');return;}
   if(data.type==='guest-paused'){if(bootStatus&&!bootStatus.complete){bootStatus.last=undefined;$('boot-eta').textContent='Загрузка приостановлена';$('boot-speed').textContent='Скорость: —';}guestActive=false;$('subtitle').textContent='Paused';$('power').textContent='Resume';log(data.flushed?'Host disk writes flushed. Guest remains paused in RAM.':'Disk flush failed; keep this tab open.');return;}
+  if(data.type==='disk-closed'){
+    worker.terminate();worker=undefined;guestActive=false;guestStarted=false;fixtureReady=false;coreReady=false;bootStatus=undefined;$('boot-overlay').hidden=true;$('boot-details').hidden=true;$('emulator').classList.remove('booting');$('load').disabled=false;$('load').click();return;
+  }
+  if(data.type==='backup-progress'){$('backup-status').textContent=`${data.mode==='restore'?'Восстанавливаем':'Сохраняем'}: ${data.message}`;return;}
+  if(data.type==='backup-ready'){
+    backupBusy=false;backupControls();const link=$('backup-download');if(link.href.startsWith('blob:'))URL.revokeObjectURL(link.href);link.href=URL.createObjectURL(data.file);link.download=data.name;link.hidden=false;
+    $('backup-status').textContent=`Готово: ${(data.file.size/1024**2).toFixed(1)} МБ. Нажмите «Скачать готовый файл». VM оставлена на паузе.`;log(`Local ${data.kind} backup prepared; no upload.`);return;
+  }
+  if(data.type==='snapshot-restored'){
+    guestStarted=true;guestActive=false;bootStatus=new BootStatus();bootStatus.complete=true;backupControls();controls(false);$('power').textContent='Resume';$('subtitle').textContent='Paused';document.querySelectorAll('.control-bar button').forEach(b=>b.disabled=false);log(`Full memory snapshot restored at ${data.retired} guest instructions; awaiting Resume.`);return;
+  }
+  if(data.type==='backup-imported'){backupBusy=false;backupControls();$('backup-status').textContent=data.kind==='snapshot'?'Снимок восстановлен. Откройте iPod и нажмите Resume.':'Диск восстановлен. Откройте iPod и нажмите Power On.';return;}
   if(data.type==='guest-progress'){
     const retired=Number(data.retired);$('guest-progress').textContent=`${retired.toLocaleString()} guest instructions`;
     if(bootStatus&&!bootStatus.complete){const status=bootStatus.progress(retired,performance.now());$('boot-bar').value=status.fraction;
@@ -53,7 +73,7 @@ $('load').onclick=()=>{
   if(data.type==='frame'){if(bootStatus?.frame(new Uint8Array(data.pixels))){$('boot-overlay').hidden=true;$('boot-details').hidden=true;$('emulator').classList.remove('booting');if(bootStatus.last)settings.set('boot-instructions',String(bootStatus.last.retired));log('Bright guest interface detected; loading overlay hidden. This is not app-launch verification.');}const pixels=new ImageData(new Uint8ClampedArray(data.pixels),640,960);$('guest-canvas').getContext('2d').putImageData(pixels,0,0);$('guest-canvas').hidden=false;$('display').querySelectorAll('p').forEach(p=>p.hidden=true);return;}
   if(data.type==='ready'){state('Interpreter active');log('WebAssembly loaded. Guest iOS is not booted.');$('load').disabled=false;controls(true);return;}
   busy=false;controls(true);showRegisters(data);
-  if(data.type==='error'){$('boot-overlay').hidden=true;$('boot-details').hidden=true;$('emulator').classList.remove('booting');$('import-prepared').disabled=guestStarted;state('Execution error');log(data.message);if(guestStarted){guestActive=false;$('subtitle').textContent='Guest halted';}else{$('fixture-status').textContent=data.message;}return;}
+  if(data.type==='error'){if(backupBusy){backupBusy=false;backupControls();$('backup-status').textContent=data.message;}$('boot-overlay').hidden=true;$('boot-details').hidden=true;$('emulator').classList.remove('booting');$('import-prepared').disabled=guestStarted;state('Execution error');log(data.message);if(guestStarted){guestActive=false;$('subtitle').textContent='Guest halted';}else{$('fixture-status').textContent=data.message;}return;}
   if(data.type==='test'){$('results').replaceChildren(...data.results.map(result=>{const p=document.createElement('p');p.className=result.passed?'pass':'fail';p.textContent=`${result.passed?'✓':'✗'} ${result.name}`;log(p.textContent);return p;}));state(data.results.every(x=>x.passed)?'ARM/Thumb tests passed':'Test failed');}
   else if(data.type==='benchmark'){log(`${data.retired.toLocaleString()} instructions; ${data.mips.toFixed(2)} MIPS`);state('Interpreter active');}
   else if(data.type==='storage'){log('OPFS: Wasm write → flush → read → close → reopen verified. Temporary test file removed.');state('OPFS test passed');}

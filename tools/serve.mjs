@@ -15,4 +15,4 @@ http.createServer(async (req,res)=>{
     res.setHeader('Content-Type',mime[path.extname(file)] || 'application/octet-stream');
     res.writeHead(200).end(bytes);
   } catch { res.writeHead(404).end('Not found'); }
-}).listen(8096,'127.0.0.1',()=>console.log('Podium Web: http://127.0.0.1:8096'));
+}).listen(Number(process.env.PORT||8096),'127.0.0.1',()=>console.log(`Podium Web: http://127.0.0.1:${process.env.PORT||8096}`));

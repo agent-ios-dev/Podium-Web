@@ -1,5 +1,7 @@
 import {WASI, File, OpenFile, ConsoleStdout} from './vendor/index.js';
 import {readFixtureTar} from './tar-stream.js';
+import {encodeArchive,decodeArchive} from './vm-archive.js';
+let coreHash,clockOffsetMs=0,archiveBusy=false;
 let core, diskHandle, bootFiles, guestRunning=false, guestCreated=false, frameNumber=0;
 const send = (type, data) => postMessage({type,...data});
 async function load() {
@@ -9,7 +11,14 @@ async function load() {
     ConsoleStdout.lineBuffered(text=>send('log',{text}))]);
   const response = await fetch('./core.wasm');
   if (!response.ok) throw new Error('Ядро core.wasm отсутствует. Выполните сборку.');
-  const module = await WebAssembly.compileStreaming(response);
+  const wasmBytes=await response.arrayBuffer();
+  coreHash=Array.from(new Uint8Array(await crypto.subtle.digest('SHA-256',wasmBytes)),x=>x.toString(16).padStart(2,'0')).join('');
+  const module = await WebAssembly.compile(wasmBytes);
+  const clockGet=wasi.wasiImport.clock_time_get;
+  wasi.wasiImport.clock_time_get=(id,precision,pointer)=>{
+    if(id!==1)return clockGet(id,precision,pointer);
+    new DataView(instance.exports.memory.buffer).setBigUint64(pointer,BigInt(Math.round((performance.now()+clockOffsetMs)*1e6)),true);return 0;
+  };
   const host = {
     disk_size:()=>BigInt(diskHandle?.getSize() ?? 0),
     disk_read:(offset,pointer,length)=>diskIO(false,offset,pointer,length),
@@ -137,6 +146,67 @@ async function bootGuest() {
   }
   if(!guestRunning){guestRunning=true;send('guest-executing',{});void guestLoop(++guestGeneration);}
 }
+
+async function exportVM(kind){
+ if(!diskHandle||!bootFiles)throw Error('Сначала подключите диск виртуальной машины');
+ if(!['disk','snapshot'].includes(kind)||kind==='snapshot'&&!guestCreated)throw Error('Полный снимок доступен после запуска гостя');
+ if(typeof CompressionStream==='undefined')throw Error('Потоковое сжатие недоступно в этом браузере');
+ guestRunning=false;guestGeneration++;if(core.podium_flush()!==0)throw Error('Не удалось сохранить записи диска');
+ if(guestCreated)send('guest-paused',{flushed:true});
+ const root=await navigator.storage.getDirectory(),folder=await root.getDirectoryHandle('podium-exports',{create:true});
+ const name=`podium-${kind}-${new Date().toISOString().replace(/[:.]/g,'-')}.podiumvm.gz`;
+ const file=await folder.getFileHandle(name,{create:true});let output=await file.createSyncAccessHandle(),finished=false;
+ const manifest={version:1,kind,device:'iPod4,1',build:'10B500',diskSize:diskHandle.getSize(),memorySize:kind==='snapshot'?core.memory.buffer.byteLength:0,coreHash,monotonicMs:performance.now()+clockOffsetMs,retired:core.podium_guest_retired().toString(),createdAt:new Date().toISOString()};
+ let lastProgress=0;
+ try{
+  const source=encodeArchive(manifest,{
+   disk(offset,count){const bytes=new Uint8Array(count);if(diskHandle.read(bytes,{at:offset})!==count)throw Error('Ошибка чтения диска');return bytes;},
+   memory(offset,count){return new Uint8Array(core.memory.buffer,offset,count);},kernel:new Uint8Array(bootFiles.kernel),tree:new Uint8Array(bootFiles.tree),
+   async progress(type,done,total){if(performance.now()-lastProgress>300){send('backup-progress',{message:`${type===1?'Диск':type===2?'Память':'Файлы загрузки'}: ${Math.round(done/total*100)}%`});lastProgress=performance.now();}await yieldGuest();}
+  }).pipeThrough(new CompressionStream('gzip'));
+  const reader=source.getReader();let offset=0;
+  try{while(true){const next=await reader.read();if(next.done)break;if(output.write(next.value,{at:offset})!==next.value.length)throw Error('Неполная запись архива');offset+=next.value.length;}}finally{reader.releaseLock();}
+  output.flush();output.close();output=undefined;finished=true;
+  send('backup-ready',{file:await file.getFile(),name,kind});
+ }finally{output?.close();if(!finished)await folder.removeEntry(name);}
+}
+async function importVM(file){
+ if(guestCreated)throw Error('Для восстановления откройте новый сеанс эмулятора');
+ if(typeof DecompressionStream==='undefined')throw Error('Потоковое сжатие недоступно');
+ const root=await navigator.storage.getDirectory(),name=`podium-vm-${crypto.randomUUID()}`,directory=await root.getDirectoryHandle(name,{create:true});
+ let manifest,handles=[],committed=false,lastProgress=0;
+ try{
+  await decodeArchive(file.stream().pipeThrough(new DecompressionStream('gzip')),{
+   async start(m){manifest=m;if(m.kind==='snapshot'&&m.coreHash!==coreHash)throw Error('Снимок создан другой версией ядра эмулятора. Требуется та же версия; копию диска можно загружать отдельно.');
+    const estimate=await navigator.storage.estimate();if(estimate.quota-estimate.usage<m.diskSize+m.memorySize+128*1024**2)throw Error('Недостаточно места для восстановления');
+    for(const [type,filename,size] of [[1,'root.hfs',m.diskSize],[2,'memory.bin',m.memorySize],[3,'kernel.macho',0],[4,'devicetree.bin',0]]){
+      const target=await directory.getFileHandle(filename,{create:true});handles[type]=await target.createSyncAccessHandle();handles[type].truncate(size);
+    }
+   },async data(type,offset,bytes){if(handles[type].write(bytes,{at:offset})!==bytes.length)throw Error('Неполная запись снимка');if(performance.now()-lastProgress>300){const total=type===1?manifest.diskSize:type===2?manifest.memorySize:bytes.length;send('backup-progress',{mode:'restore',message:`${type===1?'Диск':type===2?'Память':'Файлы загрузки'}: ${Math.min(100,Math.round((offset+bytes.length)/total*100))}%`});lastProgress=performance.now();}},async end(){for(const handle of handles)if(handle)handle.flush();}
+  });
+  for(const handle of handles)handle?.close();handles=[];
+  const checked=await checkedBootFiles(await (await directory.getFileHandle('kernel.macho')).getFile(),await (await directory.getFileHandle('devicetree.bin')).getFile());
+  const nextDisk=await (await directory.getFileHandle('root.hfs')).createSyncAccessHandle();
+  const headerBytes=new Uint8Array(512);nextDisk.read(headerBytes,{at:1024});const header=new DataView(headerBytes.buffer);
+  if(![0x482b,0x4858].includes(header.getUint16(0))||BigInt(header.getUint32(40))*BigInt(header.getUint32(44))!==8589934592n){nextDisk.close();throw Error('Повреждённый диск в архиве');}
+  if(manifest.kind==='snapshot'){
+   const saved=await (await directory.getFileHandle('memory.bin')).createSyncAccessHandle();
+   try{
+    if(manifest.memorySize<core.memory.buffer.byteLength)throw Error('Несовместимый размер памяти ядра');
+    core.memory.grow((manifest.memorySize-core.memory.buffer.byteLength)/65536);
+    const memory=new Uint8Array(core.memory.buffer);memory.fill(0);
+    for(let offset=0;offset<manifest.memorySize;offset+=1024*1024){const bytes=memory.subarray(offset,Math.min(offset+1024*1024,manifest.memorySize));if(saved.read(bytes,{at:offset})!==bytes.length)throw Error('Ошибка восстановления памяти');}
+   }catch(error){nextDisk.close();throw error;}finally{saved.close();}
+   clockOffsetMs=manifest.monotonicMs-performance.now();
+  }
+  diskHandle?.close();diskHandle=nextDisk;bootFiles=checked;
+  await writeSmall(root,'podium-active-vm.json',new TextEncoder().encode(JSON.stringify({version:1,directory:name,build:'10B500'})).buffer);
+  committed=true;send('fixture-ready',{diskSize:manifest.diskSize});
+  if(manifest.kind==='snapshot'){guestCreated=true;guestRunning=false;send('snapshot-restored',{retired:manifest.retired});const pointer=core.podium_frame()>>>0,bytes=new Uint8Array(core.memory.buffer,pointer,640*960*4),rgba=new Uint8Array(bytes.length);for(let i=0;i<bytes.length;i+=4){rgba[i]=bytes[i+2];rgba[i+1]=bytes[i+1];rgba[i+2]=bytes[i];rgba[i+3]=255;}postMessage({type:'frame',pixels:rgba.buffer},[rgba.buffer]);}
+  send('backup-imported',{kind:manifest.kind});
+ }finally{for(const handle of handles)handle?.close();if(!committed)await root.removeEntry(name,{recursive:true});}
+}
+
 function diskIO(write,offset,pointer,length) {
   if(!diskHandle || offset<0n || length<0 || length>16*1024*1024 || offset+BigInt(length)>BigInt(diskHandle.getSize()))return -1;
   const address=pointer>>>0;
@@ -155,6 +225,9 @@ onmessage = async ({data})=>{
   try {
     if (data.type==='init') { await load(); await restoreFixture(); send('init-complete',{}); return; }
     if (!core) throw new Error('Ядро ещё не загружено');
+    if(archiveBusy)throw Error('Дождитесь завершения сохранения или восстановления');
+    if(data.type==='export-vm'||data.type==='import-vm'){archiveBusy=true;try{if(data.type==='export-vm')await exportVM(data.kind);else await importVM(data.file);}finally{archiveBusy=false;}return;}
+    if(data.type==='close-disk'){guestRunning=false;guestGeneration++;if(diskHandle){diskHandle.flush();diskHandle.close();diskHandle=undefined;}send('disk-closed',{});return;}
     if(data.type==='import-fixture'){await importFixture(data.files);return;}
     if(data.type==='boot'){await bootGuest();return;}
     if(data.type==='pause'){guestRunning=false;guestGeneration++;const status=core.podium_flush();send('guest-paused',{flushed:status===0});return;}

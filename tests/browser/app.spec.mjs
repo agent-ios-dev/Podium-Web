@@ -43,3 +43,23 @@ test('boot overlay, speed and ETA disappear when guest graphics arrive',async({p
  await page.getByRole('button',{name:'Home button',exact:true}).click();
  await expect(page.locator('#boot-overlay')).toBeHidden();await expect(page.locator('#boot-details')).toBeHidden();
 });
+// UI transition regression: restoring after a running guest must start a new Worker.
+test('snapshot import replaces a paused worker and exposes Resume',async({page})=>{
+ await page.route('**/worker.js',route=>route.fulfill({contentType:'text/javascript',body:`onmessage=({data})=>{
+ if(data.type==='init'){postMessage({type:'ready'});postMessage({type:'fixture-ready'});postMessage({type:'init-complete'});}
+ if(data.type==='boot')postMessage({type:'guest-executing'});
+ if(data.type==='close-disk')postMessage({type:'disk-closed'});
+ if(data.type==='import-vm'){postMessage({type:'snapshot-restored',retired:'123456789'});postMessage({type:'backup-imported',kind:'snapshot'});}
+ };`}));
+ await page.goto('/');await page.getByRole('button',{name:'Launch iPod'}).click();await expect(page.locator('#power')).toBeEnabled();await page.locator('#power').click();await expect(page.locator('#power')).toHaveText('Pause');
+ await page.getByRole('button',{name:'‹ Home',exact:true}).click();await page.locator('#tabs').getByRole('button',{name:'Settings',exact:true}).click();
+ const chooserPromise=page.waitForEvent('filechooser');await page.locator('#restore-vm').click();const chooser=await chooserPromise;await chooser.setFiles({name:'ui-test.podiumvm.gz',mimeType:'application/gzip',buffer:Buffer.from('synthetic UI test')});
+ await expect(page.locator('#backup-status')).toContainText('Снимок восстановлен');
+ await page.locator('#tabs').getByRole('button',{name:'Home',exact:true}).click();await page.getByRole('button',{name:'Launch iPod'}).click();await expect(page.locator('#power')).toHaveText('Resume');await expect(page.locator('#boot-overlay')).toBeHidden();
+});
+test('snapshot import starts core from Settings on a fresh page',async({page})=>{
+ await page.route('**/worker.js',route=>route.fulfill({contentType:'text/javascript',body:`onmessage=({data})=>{if(data.type==='init'){postMessage({type:'ready'});postMessage({type:'init-complete'});}if(data.type==='import-vm'){postMessage({type:'fixture-ready'});postMessage({type:'snapshot-restored',retired:'123'});postMessage({type:'backup-imported',kind:'snapshot'});}};`}));
+ await page.goto('/');await page.locator('#tabs').getByRole('button',{name:'Settings',exact:true}).click();
+ const waiting=page.waitForEvent('filechooser');await page.locator('#restore-vm').click();const chooser=await waiting;await chooser.setFiles({name:'ui-test.podiumvm.gz',mimeType:'application/gzip',buffer:Buffer.from('UI test')});
+ await expect(page.locator('#backup-status')).toContainText('Снимок восстановлен');await expect(page.locator('#restore-vm')).toBeEnabled();
+});

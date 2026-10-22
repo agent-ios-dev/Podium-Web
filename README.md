@@ -88,3 +88,27 @@ Upstream: https://github.com/Leviidev/Podium at
 `b8f54f55f33df3860c14ec134a416906f88348ad`.
 The preparation tool records SHA-256 for source inputs and limits adaptations
 to explicit browser adapters. Third-party runtime licenses are in `web/vendor/`.
+
+## Manual backups and paused-state files
+
+In Settings → Virtual iPod:
+
+- **Сохранить диск в файл** exports the current disk plus kernel/device tree.
+  Importing this backup cold-boots the disk; it does not resume paused CPU state.
+  Saving a mounted disk is crash-consistent, not a clean iOS shutdown.
+- **Пауза и сохранить полный снимок** pauses at a Wasm call boundary and exports
+  the matching disk plus the complete Wasm linear memory. CPU state, device
+  objects, guest RAM and Swift heap are inside this image. The monotonic clock
+  offset is restored as well. The guest stays paused when saving finishes.
+- Click **Скачать готовый файл** to download `.podiumvm.gz` to your device.
+- **Восстановить из файла** validates and stages a backup into a new OPFS
+  directory before replacing the active disk pointer. A full snapshot opens
+  paused: choose Launch iPod → Resume to continue. The previous disk directory
+  is retained. Do not reload while a save or restore operation is in progress.
+
+Full snapshots require exactly the same `core.wasm` SHA-256. An incompatible
+core is rejected before memory restoration; retain the corresponding runtime
+version when updating. These files contain private guest data and stay local.
+Sparse blocks and gzip are streamed without allocating the full disk in RAM.
+Storage quota is checked conservatively; enough room for a separate disk and
+staged memory is required. Physical iPhone Safari remains unverified.

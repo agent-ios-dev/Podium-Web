@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "start": "node tools/serve.mjs",
-    "test": "node --test tests/core.test.mjs tests/tar.test.mjs tests/boot.test.mjs"
+    "test": "node --test tests/core.test.mjs tests/tar.test.mjs tests/boot.test.mjs tests/snapshot.test.mjs tests/archive.test.mjs"
   },
   "dependencies": {
     "@bjorn3/browser_wasi_shim": "0.4.2"
