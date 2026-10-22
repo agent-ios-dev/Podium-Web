@@ -2,6 +2,11 @@ name: Build Wasm, verify WebKit and publish Pages
 on:
   push:
     branches: [main]
+    paths-ignore:
+      - tools/WebFixtureExportTests.swift
+      - STATUS.md
+      - README.md
+      - reports/**
   workflow_dispatch:
 permissions:
   contents: read
