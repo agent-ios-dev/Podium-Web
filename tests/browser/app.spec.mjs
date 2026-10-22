@@ -27,3 +27,19 @@ test('Podium navigation and actual Wasm execution',async({page})=>{
 });
 
 
+
+// Synthetic worker messages verify loading presentation only, not real iOS boot.
+test('boot overlay, speed and ETA disappear when guest graphics arrive',async({page})=>{
+ await page.route('**/worker.js',route=>route.fulfill({contentType:'text/javascript',body:`onmessage=({data})=>{
+ if(data.type==='init'){postMessage({type:'ready'});postMessage({type:'fixture-ready'});postMessage({type:'init-complete'});}
+ if(data.type==='boot'){postMessage({type:'guest-executing'});postMessage({type:'guest-progress',retired:'100000000'});setTimeout(()=>postMessage({type:'guest-progress',retired:'200000000'}),100);}
+ if(data.type==='button'){const pixels=new Uint8Array(640*960*4).fill(180);for(let i=0;i<3;i++)postMessage({type:'frame',pixels:pixels.buffer});}
+ };`}));
+ await page.goto('/');await page.getByRole('button',{name:'Launch iPod'}).click();
+ await expect(page.locator('#power')).toBeEnabled();await page.locator('#power').click();
+ await expect(page.locator('#boot-overlay')).toBeVisible();await expect(page.locator('#boot-speed')).toContainText('млн инструкций/с');
+ const bounds=await page.locator('#boot-details').boundingBox(),screen=await page.locator('#display').boundingBox();expect(bounds.y).toBeGreaterThanOrEqual(screen.y+screen.height);
+ await page.screenshot({path:`reports/${test.info().project.name}-boot-loading.png`,fullPage:true});
+ await page.getByRole('button',{name:'Home button',exact:true}).click();
+ await expect(page.locator('#boot-overlay')).toBeHidden();await expect(page.locator('#boot-details')).toBeHidden();
+});

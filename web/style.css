@@ -41,3 +41,12 @@ body:has(#emulator:not([hidden])) main { padding-bottom: 0; }
 @media (min-width: 750px) {
   .emulator-view { height: calc(100dvh - 90px - env(safe-area-inset-top)); }
 }
+
+.booting { grid-template-rows: minmax(0,1fr) 36px 48px 84px; }
+#boot-overlay { position:absolute;inset:0;z-index:2;background:#000;color:#eee;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:42px; }
+.boot-apple { width:68px;height:82px; }
+#boot-bar { width:140px;height:5px;appearance:none;-webkit-appearance:none;border:0;border-radius:4px;overflow:hidden;background:#333;color:#ddd; }
+#boot-bar::-webkit-progress-bar { background:#333;border-radius:4px; }
+#boot-bar::-webkit-progress-value { background:#ddd;border-radius:4px;transition:width .5s; }
+#boot-bar::-moz-progress-bar { background:#ddd;border-radius:4px; }
+#boot-details { display:flex;flex-direction:column;align-items:center;gap:3px;font-size:11px;line-height:15px;color:var(--secondary); }
