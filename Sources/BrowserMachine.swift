@@ -33,6 +33,40 @@ final class BrowserMachine {
     let display: DisplayScanout
     let disk: FileBackedStorage?
     let pixels: UnsafeMutableRawPointer
+    private var paceAnchor: (host: Double, virtual: UInt64)?
+    private var buttons: [Int32: (host: Double, virtual: UInt64)] = [:]
+    private var releases: [Int32: UInt64] = [:]
+    private static let virtualPerSecond = 384_000_000.0
+    private func now() -> Double {
+        browser_monotonic_seconds()
+    }
+    func paceLimit() -> UInt64 {
+        let host = now(), virtual = cpu.virtualTime
+        guard let anchor = paceAnchor else { paceAnchor = (host, virtual); return virtual }
+        let allowed = anchor.virtual &+ UInt64(max(0, host - anchor.host) * Self.virtualPerSecond)
+        if allowed > virtual, Double(allowed - virtual) / Self.virtualPerSecond > 0.25 {
+            paceAnchor = (host, virtual); return virtual
+        }
+        return allowed
+    }
+    private func event(_ code: Int32, _ down: Bool) -> InputEvent? {
+        switch code { case 0: return .homeButton(pressed: down); case 1: return .powerButton(pressed: down)
+        case 2: return .volumeDown(pressed: down); case 3: return .volumeUp(pressed: down); default: return nil }
+    }
+    func button(_ code: Int32, _ down: Bool) {
+        guard let event = event(code, down) else { return }
+        if down { buttons[code] = (now(), cpu.virtualTime); platform.handle(event) }
+        else if let pressed = buttons.removeValue(forKey: code) {
+            let held = min(max(now() - pressed.host, 0), 3)
+            releases[code] = pressed.virtual &+ UInt64(held * Self.virtualPerSecond)
+        } else { platform.handle(event) }
+    }
+    func applyReleases() {
+        for (code, due) in releases where cpu.virtualTime >= due {
+            releases[code] = nil
+            if let event = event(code, false) { platform.handle(event) }
+        }
+    }
     init(kernel: Data, tree: Data, requireDisk: Bool = true) throws {
         // Check the disk and exact kernel before reserving a GiB of guest RAM.
         disk = requireDisk ? try FileBackedStorage() : nil
@@ -76,6 +110,8 @@ func boot(_ kernel: UnsafeMutableRawPointer?, _ kernelSize: Int32, _ tree: Unsaf
 @_cdecl("podium_machine_run")
 func machineRun(_ budget: Int32) -> Int32 {
     guard let machine, budget > 0, budget <= 100_000 else { return -1 }
+    machine.applyReleases()
+    machine.cpu.idleSkipLimit = machine.paceLimit()
     let count = machine.cpu.run(maxUnits: Int(budget))
     if let error = machine.cpu.lastError { print("Guest CPU halted: \(error)"); return -2 }
     if let address = machine.cpu.hitBreakpoint { print("Guest stop breakpoint \(address.hexString8)"); return -3 }
@@ -83,6 +119,12 @@ func machineRun(_ budget: Int32) -> Int32 {
 }
 @_cdecl("podium_machine_pc")
 func machinePC() -> UInt32 { machine?.cpu.registers.pc ?? 0 }
+@_cdecl("podium_guest_ram")
+func guestRAM() -> UnsafeMutableRawPointer? { machine?.memory.pointer }
+@_cdecl("podium_guest_register")
+func guestRegister(_ index: Int32) -> UInt32 { guard let machine, index >= 0, index < 16 else { return 0 }; return machine.cpu.registers[Int(index)] }
+@_cdecl("podium_guest_retired")
+func guestRetired() -> UInt64 { machine?.cpu.retiredInstructionCount ?? 0 }
 @_cdecl("podium_frame")
 func frame() -> UnsafeMutableRawPointer? {
     guard let machine else { return nil }
@@ -92,10 +134,7 @@ func frame() -> UnsafeMutableRawPointer? {
 @_cdecl("podium_button")
 func button(_ code: Int32, _ down: Int32) {
     guard let machine else { return }
-    let event: InputEvent
-    switch code { case 0: event = .homeButton(pressed: down != 0); case 1: event = .powerButton(pressed: down != 0)
-    case 2: event = .volumeDown(pressed: down != 0); case 3: event = .volumeUp(pressed: down != 0); default: return }
-    machine.platform.handle(event)
+    machine.button(code, down != 0)
 }
 @_cdecl("podium_touch")
 func touch(_ phase: Int32, _ x: Double, _ y: Double) {

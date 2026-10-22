@@ -1,54 +1,42 @@
-# Checkpoint â€” 22 October 2026
+# Current checkpoint — 2026-10-22
 
-Goal: genuine iPod touch 4 / iOS 6.1.6 running entirely in Safari via Wasm, with
-Podium's native app UI hierarchy, published on GitHub Pages. NOT achieved yet.
+Active target: real iPod touch 4 / iOS 6.1.6 in Wasm, Safari and Pages with
+Podium UI. No complete working browser iOS claimed.
 
-Current project work/Podium-Web, new repo agent-ios-dev/Podium-Web. First Actions
-run 39821367430 builds pinned upstream sources and publishes ONLY static web/.
-Pages enabled at https://agent-ios-dev.github.io/Podium-Web/; confirm deployment.
+Public Pages is live at https://agent-ios-dev.github.io/Podium-Web/ from prior
+runtime 1e9d0f4; HEAD22a12df only adds private helper/report workflow changes.
+Current uncommitted runtime adds OPFS import/reopen, real boot/frame/input,
+original 384M virtual-units host clock pacing, minimum real button holds,
+MessageChannel task scheduling and visible guest instruction counts.
 
-Actual local results: Swift6.2.4 official Wasm SDK checksum recorded; 63 upstream
-Swift files include ARM/Thumb/MMU, A4 platform, kernel loader and scanout. Native
-AArch64 JIT explicitly unavailable; no fake native code. AES adapted to pinned
-CryptoSwift1.8.4 with actual FIPS encrypt/decrypt vector passing. Nine Node WASI
-checks passed. Actual UI/browser execution tests passed Chromium + Windows
-Playwright WebKit26 with iPhone13 viewport. This is not physical Safari evidence.
+Private Inferno-VM preparation run39824000586 succeeded. Fresh private kit in
+../podium-web-private/fixture-artifact/private-podium-browser-fixture.tar.gz
+is pristine (436924213 bytes), never publish it or keys/raw guest logs.
+Native preparation helper c2a3c6f01beab9e2dd2f08b24ae92a0be141f72b matches
+original Podium b8f54f55f33df3860c14ec134a416906f88348ad. No duplicate job needed.
 
-Original kernel work/kernel.macho SHA matches original 10B500 storage ABI.
-Original n81ap device tree fetched by HTTP Range from official Apple IPSW into
-PRIVATE sibling work/podium-web-private/devicetree.bin. Read-only kernel probe
-runs **100,000,000** actual guest instructions, no observed CPU error or stop
-breakpoint. NO root disk attached; no userspace, SpringBoard, app or visible UI
-proof. Never publish private tree/kernel/key material or raw logs. Public report
-contains only bounded result. Private harness kernel-probe.mjs and result there.
+Latest core built successfully in podium-web-build Docker with Swift6.2.4.
+Node14 tests pass; Chromium and Windows mobile-WebKit UI/Wasm checks pass.
+Windows WebKit lacks OPFS; actual iPhone Safari remains untested.
+Actual kit streaming test: 8GiB logical, 776945664 stored root bytes, kernel
+hash valid. Local Chromium imported kit and reopened OPFS after page reload.
 
-Current local build container podium-web-build, Swift6.2-jammy actually6.2.4;
-source/SDK build in it. work/Podium original is read-only by convention, no
-original emulator/VM changes. Native inferno VM left alone. Local server Node
-session serves http://127.0.0.1:8096. Last build session31961 adds an exported
-Wasm OPFS roundtrip probe using a unique temporary16bytefile. Wait for completion
-then npm test and npx playwright test (WebKit+Chromium). The new browser test
-expects5checks (ARM memory/branch/Thumb, A4 IRQ, AES) and OPFS flush/reopen proof.
-Do not claim that storage check passed until it does. Remove stale COOP/COEP
-headers by restarting local server before final tests: Pages has neither header.
+Private controlled-guest.mjs Node session48253 keeps actual guest RAM and root
+FD alive, now auto-paused after600sec: 9598190447 retired, no CPU halt,
+749 nonblack frames, genuine Russian iOS6 lock screen visually inspected in
+controlled-frame.png. No home screen/app claim. Control8097 only loopback.
+IMPORTANT harness automatic600sec bound means resume immediately auto-pauses
+again after one batch. A bounded3000 resume-batch + real swipe probe is running
+session80636; do not launch a second copy on prepared/root.hfs. Old root is
+modified by boot; archive remains pristine. Do not stop unrelated Inferno VM.
 
-Source changes after initial7e85b83 include real-kernel-probe export, OPFS test,
-source attribution/licenses, SVG icon fixes and bounded100M report. Commit/push
-ONLY after passing. Don't launch duplicate Actions; existing run may be active.
+Browser CUA page tab2 local8096 now has independent OPFS copy, latest pacing
+core and MessageChannel worker, actual guest running, counter visible. It was
+cold-restarted after host flush to test saved storage and updated scheduler.
+Keep it open. No browser image UI yet at this checkpoint. Public tab4 remains
+old Pages prototype. Do not replace any genuine output with screenshot/logo.
 
-Missing: usable root image/firmware preparation and import (IPSW button still
-disabled), persisted OPFS guest disk + boot loop wiring/frame transfer/touch in
-Worker/UI. Swift BrowserMachine has a genuine original disk-bridge adapter with
-64bitoffset imports; Worker host callbacks validate bounds but only the temporary
-OPFS probe opens a handle so far. Don't imply full8GiB guest I/O is verified.
-Firmware import requires porting UDIF encrypted image / HFS preparation (original
-Swift sources in Podium/Firmware/RootFilesystem; Apple-only Compression,
-CommonCrypto, Darwin, SQLite etc). Existing old prepared iPod image not found in
-workspace; D drive absent. DO NOT substitute iPhone11/Inferno disk or pretend
-an empty sparse disk is a real iOS root. Source key file is only read locally by
-private fetch helper; do not copy it into public port.
-
-UI: Home, Settings, Firmware, Emulator, Developer from original SwiftUI source.
-Theme+case toggles functional, unsupported iOS/disk/audio/install controls
-explicitly disabled. No fake guest screenshot/Apple boot animation. User requested
-actual iOS with graphical interface, not CPU-only demo; remain clear unfinished.
+Next: inspect bounded Node unlock result and actual browser frame/input.
+Only commit source/tests/bounded reports. Never private firmware, images,
+keys, raw logs. Save actual screenshot evidence locally. Publish current code
+only after final browser checks, retain clear unverified Safari/app limits.

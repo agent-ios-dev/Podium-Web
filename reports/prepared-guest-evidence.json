@@ -1,0 +1,30 @@
+{
+  "date": "2026-10-22",
+  "core": "original Podium ARMv7 Swift to Wasm",
+  "node_semantic_tests": 14,
+  "browser_checks": [
+    "Chromium passed",
+    "Windows mobile WebKit passed; OPFS not exposed"
+  ],
+  "private_fixture": {
+    "prepared": true,
+    "public_firmware_files": false,
+    "logical_disk_bytes": 8589934592,
+    "stored_root_bytes": 776945664,
+    "chromium_stream_import_and_reopen": true
+  },
+  "node_guest": {
+    "retired_instructions": "9598190447",
+    "elapsed_seconds": 600,
+    "cpu_halt_observed": false,
+    "visually_verified": "genuine iOS6 lock screen",
+    "home_screen_verified": false,
+    "app_launch_verified": false
+  },
+  "browser_guest": {
+    "actual_instructions_executing": true,
+    "ui_verified": false,
+    "test_in_progress": true
+  },
+  "physical_safari_verified": false
+}

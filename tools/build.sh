@@ -12,6 +12,7 @@ swift build -c release --swift-sdk swift-6.2.4-RELEASE_wasm \
   -Xlinker --export=podium_machine_pc -Xlinker --export=podium_frame \
   -Xlinker --export=podium_button -Xlinker --export=podium_touch -Xlinker --export=podium_flush \
   -Xlinker --export=podium_hardware_test -Xlinker --export=podium_aes_test \
-  -Xlinker --export=podium_kernel_probe -Xlinker --export=podium_storage_test
+  -Xlinker --export=podium_kernel_probe -Xlinker --export=podium_storage_test \
+  -Xlinker --export=podium_guest_ram -Xlinker --export=podium_guest_register -Xlinker --export=podium_guest_retired
 mkdir -p web
 cp .build/wasm32-unknown-wasip1/release/podium-core.wasm web/core.wasm
