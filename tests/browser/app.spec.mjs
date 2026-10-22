@@ -8,7 +8,8 @@ test('Podium navigation and actual Wasm execution',async({page})=>{
  await page.getByRole('button',{name:'Load WebAssembly Core'}).click();
  await expect(page.locator('#cpu-status')).toHaveText('Interpreter active');
  await page.getByRole('button',{name:'Test ARMv7',exact:true}).click();
- await expect(page.locator('#results .pass')).toHaveCount(5);
+ // The first execution lazily compiles the large Swift Wasm core on Linux WebKit.
+ await expect(page.locator('#results .pass')).toHaveCount(5,{timeout:30000});
  await expect(page.locator('#cpu-status')).toHaveText('ARM/Thumb tests passed');
  await expect(page.locator('#registers')).toContainText('0x00000008');
  await page.getByRole('button',{name:'Benchmark',exact:true}).click();
