@@ -60,3 +60,49 @@ body[data-screen="home"] .tab-bar{transform:translateX(calc(-50% - 5.5px));}
  body[data-screen="home"] .home-view{padding-bottom:23px;}
  body[data-screen="home"] .tab-bar{position:relative;left:auto;bottom:auto;transform:translateX(-5.5px);margin:0 auto max(17px,env(safe-area-inset-bottom));}
 }
+
+/* Refined button treatment: consistent symbols, restrained depth, real press states. */
+.home-view .launch{
+ border:1px solid #52b9ff80;border-radius:26px;
+ background:linear-gradient(180deg,#20a4ff 0%,#0088f4 100%);
+ box-shadow:inset 0 1px 0 #ffffff40,0 6px 20px #008cff26;
+ font-size:21px;font-weight:500;letter-spacing:-.4px;
+ transition:transform .15s,filter .15s,box-shadow .15s;
+}
+body[data-screen="home"] .tab-bar{
+ background:linear-gradient(180deg,#333336e8,#242426f5);border:1px solid #ffffff18;
+ box-shadow:inset 0 1px 0 #ffffff12,0 10px 30px #0005;
+ backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);
+ padding:5px;height:78px;
+}
+body[data-screen="home"] .tab-bar button{color:#929297;font-size:12px;font-weight:500;padding:7px 0;border-radius:34px;transition:background .2s,color .2s,transform .15s;}
+body[data-screen="home"] .tab-bar button.selected{color:#fff;background:linear-gradient(180deg,#56565b99,#42424680);box-shadow:inset 0 1px 0 #ffffff15;}
+body[data-screen="home"] .tab-bar button span{height:30px;line-height:30px;margin-bottom:4px;}
+.tab-bar button span svg{width:25px;height:25px;fill:none;stroke:currentColor;stroke-width:1.6;stroke-linecap:round;stroke-linejoin:round;}
+body[data-screen="emulator"] #back,.vm-run{
+ width:48px;height:48px;top:calc(14px + env(safe-area-inset-top));
+ border:1px solid #ffffff12;background:linear-gradient(180deg,#5555589e,#333336bf);
+ box-shadow:inset 0 1px 0 #ffffff17,0 3px 10px #0002;
+ transition:transform .15s,background .15s;
+}
+body[data-screen="emulator"] #back{left:16px;}
+.vm-run{right:16px;}
+body[data-screen="emulator"] #back:before{width:16px;height:16px;left:12px;top:14px;border-width:2.8px;border-radius:1px;}
+.vm-run:before{border-top-width:10px;border-bottom-width:10px;border-left-width:16px;transform:translateX(2px);}
+.vm-run.is-running:before{width:14px;height:18px;border-left-width:4px;border-right-width:4px;}
+body[data-screen="emulator"] .control-bar{
+ background:linear-gradient(180deg,#303033f0,#202023f5);border:1px solid #ffffff17;
+ box-shadow:inset 0 1px 0 #ffffff0d,0 10px 32px #0005;
+ height:84px;max-width:360px;padding:9px;gap:10px;
+}
+body[data-screen="emulator"] .control-bar button{
+ max-width:64px;max-height:64px;color:#e9e9ed;border:1px solid #ffffff0b;
+ background:linear-gradient(180deg,#444448,#303033);box-shadow:inset 0 1px 0 #ffffff12,0 3px 7px #0003;
+ transition:transform .12s,filter .12s,box-shadow .12s;
+}
+body[data-screen="emulator"] .control-bar .icon{width:26px;height:26px;stroke-width:1.65;}
+body[data-screen="emulator"] .control-bar button:disabled{opacity:.6;}
+.home-view .launch:active,.vm-run:active,body[data-screen="emulator"] #back:active,.control-bar button:not(:disabled):active{transform:scale(.95);filter:brightness(.85);box-shadow:inset 0 2px 5px #0003;}
+.tab-bar button:active{transform:scale(.97);}
+@media(hover:hover){.home-view .launch:hover{filter:brightness(1.08);}.control-bar button:not(:disabled):hover,.vm-run:not(:disabled):hover{filter:brightness(1.15);}}
+@media(prefers-reduced-motion:reduce){.home-view .launch,.tab-bar button,.vm-run,.control-bar button{transition:none;}}
