@@ -116,7 +116,7 @@ staged memory is required. Physical iPhone Safari remains unverified.
 
 ## Interface updates and snapshot compatibility
 
-`runtime.json` pins the previously deployed public Wasm runtime. CI still builds
+`runtime.json` pins the current verified public Wasm runtime. CI still builds
 the core from source, then verifies the pinned runtime before running all tests
 and deploying. This keeps interface-only changes compatible with snapshots of
 that runtime. The source-input fingerprint rejects unnoticed CPU/runtime changes;

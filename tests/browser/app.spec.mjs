@@ -1,4 +1,8 @@
 import {test,expect} from '@playwright/test';
+import {mkdir,writeFile} from 'node:fs/promises';
+const browserErrors=new WeakMap();
+test.beforeEach(async({page})=>{const errors=[];browserErrors.set(page,errors);page.on('pageerror',error=>errors.push(String(error)));});
+test.afterEach(async({page},info)=>{if(info.status!==info.expectedStatus){await mkdir('reports',{recursive:true});await writeFile(`reports/${info.project.name}-failure.json`,JSON.stringify({errors:browserErrors.get(page),status:await page.locator('#cpu-status').textContent(),log:await page.locator('#log').textContent(),results:await page.locator('#results').textContent()},null,2));await page.screenshot({path:`reports/${info.project.name}-failure.png`,fullPage:true});}});
 test('Podium navigation and actual Wasm execution',async({page})=>{
  await page.goto('/');await expect(page.getByRole('heading',{name:'iPod Touch 4',exact:true})).toBeVisible();
  await expect.poll(()=>page.locator('.ipod-preview').evaluate(img=>img.naturalWidth)).toBeGreaterThan(0);
@@ -10,7 +14,7 @@ test('Podium navigation and actual Wasm execution',async({page})=>{
  await page.getByRole('button',{name:'Load WebAssembly Core'}).click();
  await expect(page.locator('#cpu-status')).toHaveText('Interpreter active');
  await page.getByRole('button',{name:'Test ARMv7',exact:true}).click();
- // The first execution lazily compiles the large Swift Wasm core on Linux WebKit.
+ // Bound actual Wasm execution; failures retain status, logs and a screenshot.
  await expect(page.locator('#results .pass')).toHaveCount(5,{timeout:30000});
  await expect(page.locator('#cpu-status')).toHaveText('ARM/Thumb tests passed');
  await expect(page.locator('#registers')).toContainText('0x00000008');
