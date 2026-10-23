@@ -5,7 +5,7 @@ let worker,busy=false,lines=[],route='home',previous='home',coreReady=false,pend
 const settings={get(key,fallback){try{return localStorage.getItem(key)??fallback;}catch{return fallback;}},set(key,value){try{localStorage.setItem(key,value);}catch{}}};
 function navigate(next){
  if(!['home','settings','emulator','firmware','developer'].includes(next))next='home';
- if(next!==route)previous=route;route=next;document.body.dataset.screen=next;$('power').hidden=next!=='emulator';
+ if(next!==route)previous=route;route=next;
  for(const view of document.querySelectorAll('.view'))view.hidden=view.id!==next;
  $('title').textContent={home:'Home',settings:'Settings',emulator:'Podium',firmware:'Firmware',developer:'Developer'}[next];
  $('subtitle').textContent=next==='emulator'?(guestStarted?(guestActive?'Guest executing':'Paused'):'Powered off'):'';
@@ -112,7 +112,3 @@ for(const element of document.querySelectorAll('.launch,#power,.display-symbol,.
 const homeIcon='<svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="m3 11 9-8 9 8M5 9v12h5v-7h4v7h5V9"/></svg>';
 document.querySelector('.control-bar button[aria-label="Home button"]').innerHTML=homeIcon;
 for(const [label,sign] of [['Volume down','−'],['Volume up','+']])document.querySelector(`.control-bar button[aria-label="${label}"]`).innerHTML=`<svg class="icon" viewBox="0 0 28 24" aria-hidden="true"><path d="M3 8h4l6-5v18l-6-5H3z"/><text x="18" y="16" fill="currentColor" stroke="none" font-size="17">${sign}</text></svg>`;
-
-// The header play/pause button keeps the same boot/resume/pause callback.
-function updateRunButton(){const name=$('power').textContent.trim();$('power').setAttribute('aria-label',name);$('power').title=name;$('power').classList.toggle('is-running',guestActive);}
-new MutationObserver(updateRunButton).observe($('power'),{childList:true,subtree:true,characterData:true});updateRunButton();
