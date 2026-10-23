@@ -33,6 +33,7 @@ Use Swift 6.2.4 and its matching official Wasm SDK, then:
 ```sh
 python3 tools/install_sdk.py
 sh tools/build.sh
+python3 tools/fetch_runtime.py
 npm ci --ignore-scripts
 node tools/vendor.mjs
 npm test
@@ -112,3 +113,11 @@ version when updating. These files contain private guest data and stay local.
 Sparse blocks and gzip are streamed without allocating the full disk in RAM.
 Storage quota is checked conservatively; enough room for a separate disk and
 staged memory is required. Physical iPhone Safari remains unverified.
+
+## Interface updates and snapshot compatibility
+
+`runtime.json` pins the previously deployed public Wasm runtime. CI still builds
+the core from source, then verifies the pinned runtime before running all tests
+and deploying. This keeps interface-only changes compatible with snapshots of
+that runtime. The source-input fingerprint rejects unnoticed CPU/runtime changes;
+publish and pin a separately verified runtime when those inputs change.

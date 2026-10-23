@@ -1,0 +1,19 @@
+{
+  "version": 1,
+  "url": "https://github.com/agent-ios-dev/Podium-Web/releases/download/browser-core-v1/core.wasm",
+  "sha256": "39622393dfdc9b2d9daf68c31ea01593a4c2ab76e391c548a59019cc1ce095f4",
+  "sourceSha256": "cace336d168cf22ac6b507839af302ca3fd8d596ed9e91caea0713875d5190eb",
+  "sourceFiles": [
+    "Host/bridge.c",
+    "Host/include/BrowserHost.h",
+    "Package.resolved",
+    "Package.swift",
+    "Sources/BrowserAdapters.swift",
+    "Sources/BrowserMachine.swift",
+    "Sources/HardwareChecks.swift",
+    "Sources/main.swift",
+    "tools/build.sh",
+    "tools/install_sdk.py",
+    "tools/prepare.py"
+  ]
+}

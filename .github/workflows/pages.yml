@@ -29,6 +29,8 @@ jobs:
           mkdir -p ../Podium
           cp -a upstream/. ../Podium/
           docker run --rm -v "$GITHUB_WORKSPACE/..:/work" -w "/work/$(basename "$GITHUB_WORKSPACE")" swift:6.2.4-jammy sh -c 'python3 tools/install_sdk.py && sh tools/build.sh'
+      - name: Keep the verified runtime for snapshot compatibility
+        run: python3 tools/fetch_runtime.py
       - uses: actions/setup-node@v4
         with:
           node-version: 24
