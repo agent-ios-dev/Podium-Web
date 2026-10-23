@@ -1,8 +1,11 @@
 """Pin an already verified runtime so UI-only rebuilds retain snapshot compatibility."""
 from pathlib import Path
-import hashlib,json,urllib.request
+import hashlib,json,urllib.request,subprocess
 root=Path(__file__).resolve().parent.parent
 pin=json.loads((root/'runtime.json').read_text())
+tracked=subprocess.check_output(['git','ls-files','Sources','Host','Package.swift','Package.resolved','tools/prepare.py','tools/build.sh','tools/install_sdk.py'],cwd=root,text=True).splitlines()
+if sorted(tracked)!=pin['sourceFiles']:
+    raise SystemExit('Core source file set changed: verify and pin a new runtime before deployment.')
 h=hashlib.sha256()
 for path in pin['sourceFiles']:
     h.update(path.encode()+b'\0'+(root/path).read_bytes().replace(b'\r\n',b'\n')+b'\0')
