@@ -1,0 +1,62 @@
+/* Home and VM from the approved 440 x 956 Figma drawings. Settings retains style.css. */
+body[data-screen="home"],body[data-screen="emulator"]{background:#000;color:#fff;color-scheme:dark;}
+body[data-screen="home"] #app,body[data-screen="emulator"] #app{max-width:440px;}
+body[data-screen="home"] .navigation,body[data-screen="emulator"] .navigation{
+ height:75px; padding:env(safe-area-inset-top) 0 0; margin:0; border-radius:0;
+ background:linear-gradient(180deg,#4c4c4c 0%,rgba(76,76,76,.2) 100%);
+}
+body[data-screen="home"] .navigation strong,body[data-screen="emulator"] .navigation strong{font-size:32px;font-weight:400;letter-spacing:-1px;}
+body[data-screen="home"] #subtitle,body[data-screen="emulator"] #subtitle{position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%);}
+body[data-screen="home"] main{padding-bottom:0;}
+body[data-screen="home"] .home-view{max-width:440px;padding:10px 50px 124px;}
+.home-view .brand{font-size:18px;line-height:22px;font-weight:400;letter-spacing:0;color:#fff;}
+.home-view h1{font-size:24px;line-height:29px;font-weight:400;letter-spacing:-.5px;margin:5px 0 0;}
+.home-view .intro{font-size:20px;line-height:24px;color:#fff;margin:0 0 12px;}
+.home-view img.ipod-preview{display:block;width:auto;height:clamp(120px,calc(100dvh - 591px),365px);max-width:100%;aspect-ratio:188/365;object-fit:contain;padding:0;border:0;border-radius:37px;margin:0 auto 35px;background:#000;box-shadow:none;}
+.home-view .launch{display:block;width:100%;max-width:none;height:70px;min-height:70px;padding:0;border-radius:35px;background:#0090fe;color:#fff;font-size:24px;line-height:29px;font-weight:400;}
+.home-view .firmware-card{height:160px;padding:12px;margin:23px 0 0;border:0;border-radius:25px;background:#4c4c4c;color:white;}
+.home-view .firmware-card h2{font-size:22px;font-weight:400;line-height:27px;margin:0;white-space:nowrap;letter-spacing:-.5px;}
+.home-view .firmware-card .pill{float:none;font-size:20px;color:white;margin-left:4px;}
+.home-view .firmware-card .divider{display:none;}
+.home-view .firmware-card .secondary{font-size:16px;line-height:21px;color:white;margin:29px 0 11px;white-space:normal;}
+.home-view .firmware-card .link-row{width:auto;font-size:22px;line-height:27px;padding:0;justify-content:flex-start;color:white;}
+body[data-screen="home"] .tab-bar{left:50%;right:auto;transform:translateX(-50%);width:325px;max-width:calc(100% - 48px);height:84px;bottom:max(17px,env(safe-area-inset-bottom));padding:4px;border:0;border-radius:42px;background:#4c4c4c;gap:0;}
+body[data-screen="home"] .tab-bar button{width:50%;padding:8px 0 0;border-radius:38px;font-size:14px;line-height:17px;font-weight:400;color:white;}
+body[data-screen="home"] .tab-bar button.selected{background:#3f3f3f;color:white;}
+.tab-bar button span img{width:40px;height:40px;object-fit:contain;}
+body[data-screen="home"] .tab-bar button span{height:40px;line-height:40px;margin-bottom:0;}
+body[data-screen="emulator"] #back{left:13px;top:calc(13px + env(safe-area-inset-top));width:56px;height:56px;border-radius:50%;background:#4c4c4c;font-size:0;padding:0;}
+body[data-screen="emulator"] #back span{position:absolute;width:1px;height:1px;clip-path:inset(50%);overflow:hidden;}
+body[data-screen="emulator"] #back:before,body[data-screen="emulator"] #back:after{content:"";position:absolute;left:11px;top:24px;width:38px;height:7px;border-radius:4px;background:white;transform:rotate(30deg);transform-origin:31px center;}
+body[data-screen="emulator"] #back:after{transform:rotate(-30deg);}
+body[data-screen="emulator"] #expand{right:80px;font-size:20px;opacity:.65;padding:6px;}
+.vm-run{position:absolute;right:13px;top:calc(13px + env(safe-area-inset-top));width:56px;height:56px;border-radius:50%;background:#4c4c4c;color:#d9d9d9;font-size:0;padding:0;}
+.vm-run .icon{display:none;}
+.vm-run:before{content:"";display:block;width:0;height:0;border-top:18px solid transparent;border-bottom:18px solid transparent;border-left:29px solid currentColor;margin:auto;transform:translateX(3px);}
+.vm-run.is-running:before{width:21px;height:32px;border:0;border-left:7px solid currentColor;border-right:7px solid currentColor;transform:none;}
+body[data-screen="emulator"] main{padding:0;}
+body[data-screen="emulator"] .emulator-view{max-width:440px;height:calc(100dvh - 75px - env(safe-area-inset-top));min-height:340px;padding:0 32px max(16px,env(safe-area-inset-bottom));grid-template-rows:minmax(0,1fr) 97px;gap:0;}
+body[data-screen="emulator"] .guest-area{padding:36px 0 0;overflow:visible;}
+body[data-screen="emulator"] .guest-display{width:min(calc(100cqw + 20px),calc((100cqh - 36px) * 2 / 3));max-width:calc(100vw - 44px);aspect-ratio:394/589;border:4px solid #414141;border-radius:6px;padding:13px 8px;background:#000;box-shadow:none;}
+body[data-screen="emulator"] #guest-canvas,body[data-screen="emulator"] #boot-overlay{inset:13px 8px;width:calc(100% - 16px);height:calc(100% - 26px);border-radius:5px;}
+body[data-screen="emulator"] .control-bar{height:97px;width:100%;max-width:375px;margin:0;padding:9px;gap:9px;border:0;border-radius:49px;background:#4c4c4c;}
+body[data-screen="emulator"] .control-bar button{height:auto;aspect-ratio:1;min-width:0;width:auto;flex:1;max-width:81px;border-radius:50%;background:#363636;display:grid;place-items:center;}
+body[data-screen="emulator"] .control-bar .icon{width:32px;height:32px;}
+body[data-screen="emulator"] .booting{grid-template-rows:minmax(0,1fr) 38px 97px;}
+body[data-screen="emulator"] #boot-details{align-self:center;font-size:11px;}
+@media(max-width:380px){body[data-screen="home"] .home-view{padding-left:24px;padding-right:24px;}.home-view .firmware-card h2{font-size:20px;}.home-view .firmware-card .pill{font-size:18px;}}
+@media(max-height:650px){body[data-screen="emulator"] .emulator-view{grid-template-rows:minmax(0,1fr) 68px;min-height:230px;}body[data-screen="emulator"] .control-bar{height:68px;}body[data-screen="emulator"] .control-bar button{max-height:52px;}body[data-screen="emulator"] .booting{grid-template-rows:minmax(0,1fr) 38px 68px;}body[data-screen="emulator"] .guest-area{padding-top:10px;}}
+
+body[data-screen="emulator"] .guest-area{display:flex;align-items:center;justify-content:center;}
+body[data-screen="emulator"] #back:before{width:28px;height:28px;left:10px;top:14px;border-top:7px solid white;border-right:7px solid white;border-radius:3px;background:transparent;transform:rotate(45deg);transform-origin:center;}
+body[data-screen="emulator"] #back:after{display:none;}
+body[data-screen="emulator"] .control-bar button:disabled{opacity:1;}
+body[data-screen="emulator"] .control-bar button:disabled .icon{opacity:.38;}
+
+.home-view .launch,.home-view .firmware-card{width:calc(100% - 10px);}
+body[data-screen="home"] .tab-bar{transform:translateX(calc(-50% - 5.5px));}
+
+@media(max-height:760px){
+ body[data-screen="home"] .home-view{padding-bottom:23px;}
+ body[data-screen="home"] .tab-bar{position:relative;left:auto;bottom:auto;transform:translateX(-5.5px);margin:0 auto max(17px,env(safe-area-inset-bottom));}
+}
